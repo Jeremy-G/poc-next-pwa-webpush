@@ -18,6 +18,7 @@ export default function Home() {
   const [ subscription, setSubscription ] = useState(null);
   const [ registration, setRegistration ] = useState(null);
   const [ posts, setPosts ] = useState([]);
+  const [ channel, setChannel ] = useState(new BroadcastChannel("notifications"));
 
   /*
   **  POSTS
@@ -26,7 +27,8 @@ export default function Home() {
     try {
       const res = await fetch("/api/posts");
       if (res.ok) {
-        setPosts(await res.json());
+        const data = await res.json();
+        setPosts(data);
       }
     } catch (err) {
       console.error(err);
@@ -45,6 +47,50 @@ export default function Home() {
       };
       const res = await fetch("/api/posts", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        fetchPosts();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  /*
+  **  LIKES
+  */
+
+  async function like(id) {
+    try {
+      const data = {
+        ...subscriptionData
+      };
+      const res = await fetch("/api/posts/" + id + "/like", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        fetchPosts();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function unlike(id) {
+    try {
+      const data = {
+        ...subscriptionData
+      };
+      const res = await fetch("/api/posts/" + id + "/like", {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json"
         },
@@ -128,6 +174,9 @@ export default function Home() {
       setRegistration(reg);
     });
     fetchPosts();
+    channel.addEventListener("message", event => {
+      fetchPosts();
+    });
   }, []);
 
   useEffect(() => {
@@ -211,18 +260,34 @@ export default function Home() {
               </Card.Body>
               <Card.Divider />
               <Card.Footer css={{ justifyContent: "space-between" }}>
-                <Text>By { post.author || "an unknown user" }.</Text>
-                <Button
-                  auto
-                  light
-                  disabled={ !subscription || !subscriptionData }
-                  animated={ false }
-                  color="error"
-                  css={{
-                    paddingRight: "var(--nextui-space-7)"
-                  }}
-                  icon={<HeartIcon fill="currentColor" filled={ subscription && subscriptionData && post.likes.includes(subscriptionData?.keys?.token) } />}
-                />
+                <Text>By { post.subscriber?.keys?.p256dh?.slice(0, 8) || "an unknown user" }.</Text>
+                { (subscriptionData && post.likes.some((like) => (like == subscriptionData?.keys?.p256dh))) ?
+                  <Button
+                    auto
+                    light
+                    disabled={ !subscription || !subscriptionData }
+                    animated={ false }
+                    color="error"
+                    css={{
+                      paddingRight: "var(--nextui-space-7)"
+                    }}
+                    icon={<HeartIcon fill="currentColor" filled />}
+                    onPress={ () => unlike(post["$loki"]) }
+                  />
+                  :
+                  <Button
+                    auto
+                    light
+                    disabled={ !subscription || !subscriptionData }
+                    animated={ false }
+                    color="error"
+                    css={{
+                      paddingRight: "var(--nextui-space-7)"
+                    }}
+                    icon={<HeartIcon fill="currentColor" />}
+                    onPress={ () => like(post["$loki"]) }
+                  />
+                }
               </Card.Footer>
             </Card>
           </Grid>

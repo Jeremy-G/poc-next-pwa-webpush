@@ -1,4 +1,4 @@
-import db from "../../../lib/database";
+import db from "lib/database";
 import notify from "lib/notify";
 
 export default function handler(req, res) {
@@ -22,7 +22,7 @@ export default function handler(req, res) {
 
         const post = db.posts.insert({ subscriber: subscriber, content: req.body?.content, likes: [] });
 
-        notify.notifyAll({ title: "New Post !", message: post.content }, [ subscriber ]);
+        notify.notifyAll({ title: "New post from " + subscriber?.keys?.p256dh?.slice(0, 8), message: post.content }, [ subscriber ]);
 
         return (res.status(201).json(post));
 
